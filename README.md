@@ -1,65 +1,45 @@
-# Honeywell Grade Change Intelligence System (GCIS)
+# Honeywell GCIS (Grade Change Intelligence System)
 
-An AI-driven, multi-agent orchestration system designed to optimize the grade change process in paper manufacturing. The system leverages real-time IoT sensor data, machine learning pipelines, and LangGraph-powered intelligent agents to reduce off-spec production and provide operators with actionable, physics-validated recommendations.
+This repo contains our submission for the Honeywell Hackathon. The goal of this project is to optimize the grade change process in paper manufacturing using machine learning and LangGraph agents to reduce off-spec production.
 
-## 🌟 Key Features
+## How it works
 
-* **Real-time IoT Intelligence:** Continuously monitors paper machine sensors (speed, steam pressure, etc.) and Quality Control System (QCS) data.
-* **Predictive ML Pipeline:** 
-  * **LightGBM:** Calculates the real-time probability of off-spec production (`p_offspec`).
-  * **Temporal Convolutional Networks (TCN):** Forecasts the trajectory of the machine state.
-  * **TreeExplainer (SHAP):** Performs real-time root-cause attribution to identify driving factors.
-* **Agentic Orchestration:** A Node.js LangGraph `Supervisor Agent` orchestrates specialized sub-agents:
-  * *Prediction Agent:* Assesses system state.
-  * *Root Cause Agent:* Analyzes SHAP drivers.
-  * *Historical Retrieval Agent:* Queries vector embeddings (Qdrant) for past successful interventions.
-  * *Recommendation & Safety Agents:* Generates and validates physics-constrained fixes.
-  * *AI Explanation Agent:* Synthesizes operator-friendly narratives using Groq LLMs.
-* **Operator Dashboard:** A Next.js responsive UI featuring live WebSocket telemetry, predictive timelines, and interactive AI alerts.
+We built a 3-part system:
+1. **Python ML Engine (`/backend`)**: Handles feature engineering and runs our models (LightGBM for anomaly detection, TCN for forecasting, and SHAP for root cause analysis) as a FastAPI service.
+2. **Node.js Orchestrator (`/node-backend`)**: Uses LangGraph to route data between different specialized agents (Prediction, Root Cause, Recommendation, etc.) and streams updates via WebSockets.
+3. **Next.js Dashboard (`/frontend`)**: A real-time operator UI built with React and Tailwind to visualize the sensor data and AI recommendations.
 
-## 🏗️ Architecture Stack
+## Local Setup
 
-* **Frontend:** Next.js (React), TailwindCSS, Recharts
-* **Agentic Backend:** Node.js, Express, LangGraph, Groq (llama-3.3-70b-versatile)
-* **ML Service:** Python, FastAPI, LightGBM, PyTorch, SHAP
-* **Infrastructure:** PostgreSQL, Redis (Pub/Sub), Qdrant (Vector DB)
+You'll need Node.js (v18+) and Python (3.10+) installed. You also need a local MongoDB and Redis server running.
 
-## 🚀 Getting Started
-
-### Prerequisites
-* Node.js (v18+)
-* Python (3.10+)
-* Redis Server & MongoDB (running locally or via Docker)
-
-### 1. Install ML Dependencies & Run API
+### 1. Start the ML API
 ```bash
 cd backend
 pip install -r requirements-ml.txt
 python ml_api.py
 ```
-*(Runs the FastAPI ML engine on port 8001)*
+This runs the Python API on port 8001.
 
-### 2. Install Node Backend & Run Agents
+### 2. Start the Node Backend
 ```bash
 cd node-backend
 npm install
 npm run dev
 ```
-*(Runs the Express/LangGraph server and WebSockets on port 8000)*
+This starts the Express server and LangGraph agents on port 8000.
 
-### 3. Start the Next.js Frontend
+### 3. Start the Frontend
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-*(Dashboard available at http://localhost:3000)*
+The dashboard will be available at http://localhost:3000.
 
-## 📂 Repository Structure
-* `/backend` - Python FastAPI application, ML models, and inference scripts.
-* `/node-backend` - Node.js LangGraph orchestration and WebSocket servers.
-* `/frontend` - Next.js React application for the operator dashboard.
-* `/data` - Seed data, simulation notebooks, and exploratory data analysis.
+## Project Structure
 
----
-*Built for the Honeywell Hackathon.*
+- `backend/` - Python ML models and FastAPI server
+- `node-backend/` - LangGraph agents and WebSocket server
+- `frontend/` - Next.js React frontend
+- `data/` - Datasets and Jupyter notebooks for EDA
