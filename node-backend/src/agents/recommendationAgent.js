@@ -11,14 +11,20 @@ async function recommendationAgent(state) {
     };
   }
 
-  const rawCandidates = [
-    {
-      variable_name: 'steam_pressure',
-      proposed_value: 4.2,
-      expected_improvement: 'Reduces off-spec probability from 88% to 15% within 12 minutes.',
-      historical_support: ['hist-e101', 'hist-e102']
-    }
-  ];
+  let rawCandidates = [];
+  
+  if (state.root_cause_report && state.root_cause_report.ranked_factors && state.root_cause_report.ranked_factors.length > 0) {
+    const topFactor = state.root_cause_report.ranked_factors[0];
+    // Suggest reversing the direction of the top SHAP factor
+    const proposedChange = topFactor.direction === 'too_high' ? topFactor.feature_value * 0.9 : topFactor.feature_value * 1.1;
+    
+    rawCandidates.push({
+      variable_name: topFactor.feature_name,
+      proposed_value: parseFloat(proposedChange.toFixed(2)),
+      expected_improvement: `Adjusting ${topFactor.feature_name} to mitigate ${Math.round(state.p_offspec * 100)}% off-spec risk.`,
+      historical_support: state.historical_matches ? state.historical_matches.map(m => m.episode_id) : []
+    });
+  }
 
   return {
     candidate_recommendations: rawCandidates,
@@ -78,8 +84,8 @@ async function explanationAgent(state) {
   const card = {
     prediction_summary: `Predicted off-spec probability is ${Math.round(pOffspec * 100)}% over the next 15 minutes.`,
     reason: `Abnormal elevation in ${topFactor} creating process instability.`,
-    evidence: `SHAP feature attribution value: +${state.root_cause_report?.ranked_factors?.[0]?.shap_value || 0.38}`,
-    historical_match: `Similar historical pattern identified in episode ${histMatch} (94% similarity).`,
+    evidence: state.root_cause_report?.ranked_factors?.[0] ? `SHAP feature attribution value: +${state.root_cause_report.ranked_factors[0].shap_value.toFixed(3)}` : `ML Model consensus`,
+    historical_match: histMatch ? `Similar historical pattern identified in episode ${histMatch}.` : `No historical matches.`,
     confidence_statement: 'High confidence based on ML ensemble consensus.',
     safety_check_status: `Safety Validation: ${safetyStatus.toUpperCase()}`
   };

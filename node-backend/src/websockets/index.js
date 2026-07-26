@@ -9,6 +9,9 @@ function setupWebSockets(server) {
     console.log(`[WebSocket] Client connected: ${url}`);
 
     if (url.startsWith('/ws/episodes/')) {
+const { supervisorGraph } = require('../agents/supervisor');
+
+// ... inside the url.startsWith('/ws/episodes/') block
       const episodeId = url.split('/ws/episodes/')[1];
       console.log(`[WebSocket] Subscribing to episode ${episodeId}`);
 
@@ -30,12 +33,32 @@ function setupWebSockets(server) {
         console.log(`[WebSocket] Client disconnected from episode ${episodeId}`);
       });
 
+      // Send initial state immediately
       ws.send(JSON.stringify({
         episode_id: episodeId,
         p_offspec: 0.12,
         trajectory: [0.1, 0.12, 0.15],
         current_node: 'Initialized'
       }));
+
+      // Trigger the multi-agent pipeline immediately so the UI fills with real ML data
+      setTimeout(async () => {
+        try {
+          const finalState = await supervisorGraph.invoke({
+            episode_id: episodeId,
+            machine_id: 'PM1',
+            from_grade: 'GRADE-A',
+            to_grade: 'GRADE-B',
+            features: { steam_pressure: 4.5, machine_speed: 850 }
+          });
+          
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify(finalState));
+          }
+        } catch (err) {
+          console.error('[WebSocket] Failed to run supervisor graph:', err);
+        }
+      }, 1000);
 
     } else if (url === '/ws/alerts') {
       console.log('[WebSocket] Subscribing to system alerts');

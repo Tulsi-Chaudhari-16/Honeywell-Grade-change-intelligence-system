@@ -10,19 +10,36 @@ async function predictionAgent(state) {
   const speed = features['machine_speed'] || 800;
 
   let pOffspec = 0.15;
-  if (steam > 4.8 && speed > 830) {
-    pOffspec = 0.88;
-  } else if (steam > 4.4) {
-    pOffspec = 0.62;
-  }
+  let trajectory = [];
+  let rootCauseReport = null;
 
-  const trajectory = [
-    Math.min(1.0, pOffspec * 0.7),
-    Math.min(1.0, pOffspec * 0.85),
-    pOffspec,
-    Math.min(1.0, pOffspec * 1.1),
-    Math.min(1.0, pOffspec * 1.15),
-  ];
+  try {
+    const response = await fetch('http://localhost:8001/predict', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        episode_id: state.episode_id,
+        ts: state.ts || new Date().toISOString(),
+        features: state.features || {},
+        imputation_flags: state.imputation_flags || {}
+      })
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data.prediction) {
+        pOffspec = data.prediction.p_offspec;
+        trajectory = data.prediction.trajectory || [];
+      }
+      if (data.root_cause_attribution) {
+        rootCauseReport = data.root_cause_attribution;
+      }
+    } else {
+      console.warn('[PredictionAgent] ML API failed, using fallbacks');
+    }
+  } catch (err) {
+    console.warn('[PredictionAgent] ML API error:', err.message);
+  }
 
   const riskLevel = pOffspec > 0.8 ? 'High' : pOffspec > 0.5 ? 'Medium' : 'Low';
 
@@ -30,6 +47,7 @@ async function predictionAgent(state) {
     p_offspec: pOffspec,
     trajectory,
     risk_level: riskLevel,
+    raw_root_cause: rootCauseReport, // pass to RootCauseAgent
     current_node: 'PredictionAgent'
   };
 }
@@ -48,24 +66,27 @@ async function rootCauseAgent(state) {
     };
   }
 
-  const rankedFactors = [
-    {
-      rank: 1,
-      feature_name: 'steam_pressure',
-      shap_value: 0.38,
-      feature_value: state.features?.['steam_pressure'] || 4.9,
-      direction: 'too_high'
-    },
-    {
-      rank: 2,
-      feature_name: 'machine_speed',
-      shap_value: 0.24,
-      feature_value: state.features?.['machine_speed'] || 860,
-      direction: 'too_high'
-    }
-  ];
+  const rawRootCause = state.raw_root_cause;
+  let rankedFactors = [];
+  let attributionMethod = 'SHAP-Tree';
 
-  let narrative = 'High steam pressure combined with elevated machine speed is leading to thermal instability.';
+  if (rawRootCause && rawRootCause.ranked_factors) {
+    rankedFactors = rawRootCause.ranked_factors;
+    attributionMethod = rawRootCause.attribution_method || 'SHAP-Tree';
+  } else {
+    // Fallback if ML API didn't return SHAP
+    rankedFactors = [
+      {
+        rank: 1,
+        feature_name: 'steam_pressure',
+        shap_value: 0.38,
+        feature_value: state.features?.['steam_pressure'] || 4.9,
+        direction: 'too_high'
+      }
+    ];
+  }
+
+  let narrative = 'Process is experiencing instability due to identified SHAP factors.';
 
   try {
     const llm = getLLM(0.2);

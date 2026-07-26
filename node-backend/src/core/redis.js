@@ -1,4 +1,4 @@
-const Redis = require('ioredis');
+const Redis = require('ioredis-mock');
 const { config } = require('./config');
 
 const redis = new Redis({

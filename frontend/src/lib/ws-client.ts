@@ -1,7 +1,7 @@
 // frontend/lib/ws-client.ts
 import { useEffect, useState, useCallback, useRef } from 'react';
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/api/v1';
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000';
 
 export interface EpisodeState {
   episode_id: string;

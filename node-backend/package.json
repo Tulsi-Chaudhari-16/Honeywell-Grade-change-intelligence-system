@@ -17,6 +17,7 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "ioredis": "^5.4.2",
+    "ioredis-mock": "^8.13.1",
     "kafkajs": "^2.2.4",
     "mongoose": "^8.9.5",
     "ws": "^8.18.0",
