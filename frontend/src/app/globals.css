@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter);
+}
+
+@layer utilities {
+  .bg-glass {
+    @apply bg-gray-800/80 backdrop-blur-md border border-gray-700/50 shadow-xl;
+  }
+}
+
+body {
+  color: #f3f4f6;
+  background-color: #111827;
+}
